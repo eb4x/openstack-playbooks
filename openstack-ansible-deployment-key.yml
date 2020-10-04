@@ -1,0 +1,20 @@
+- name: Configure the host running openstack-ansible
+  hosts:
+    - openstack_ansible
+
+  tasks:
+    - name: generate deployment key
+      openssh_keypair:
+        type: ecdsa
+        size: 384
+        path: /root/.ssh/id_ecdsa
+      become: true
+      register: _id_ecdsa
+
+    - name: propagate deployment key
+      authorized_key:
+        user: root
+        key: "{{ _id_ecdsa.public_key }} {{ inventory_hostname }}"
+      become: true
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['openstack'] }}"

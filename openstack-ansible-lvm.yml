@@ -1,0 +1,28 @@
+---
+- name: Configure the host running openstack-ansible
+  hosts:
+    - openstack_ansible
+
+  tasks:
+    - name: create host_vars dir
+      file:
+        path: /etc/openstack_deploy/host_vars
+        state: directory
+      become: true
+
+    - name: update /etc/openstack_deploy/host_vars/
+      copy:
+        content: |
+          ---
+          #[osds.yml]
+          lvm_volumes:
+          {% for device in (hostvars[hostname].lvm_volumes | sort) %}
+            - { data_vg: {{ hostvars[hostname].lvm_volumes[device].data_vg }}, data: {{ hostvars[hostname].lvm_volumes[device].data }} }
+          {% endfor %}
+        dest: "/etc/openstack_deploy/host_vars/{{ hostname }}.yml"
+      with_items: "{{ groups['openstack'] }}"
+      loop_control:
+        loop_var: hostname
+      when:
+        - hostvars[hostname].lvm_volumes is defined
+      become: true

@@ -1,0 +1,105 @@
+---
+- name: Configure the host running openstack-ansible
+  hosts:
+    - openstack_ansible
+
+  vars:
+    external_lb_vip_address: openstack.slipsprogrammor.no
+
+    openstack_version: "stable/train"
+    openstack_tag: "20.1.6"
+
+    proxy_env:
+      http_proxy: "http://192.168.3.1:8000"
+      https_proxy: "http://192.168.3.1:8000"
+
+  pre_tasks:
+    - name: create src
+      file:
+        state: directory
+        path: "{{ ansible_env.HOME }}/src"
+
+    - name: fix vim
+      copy:
+        content: |
+          filetype plugin indent off
+          set background=dark
+        dest: "{{ item }}"
+      with_items:
+        - /etc/vim/vimrc.local
+        - /root/.vimrc
+        - "{{ ansible_env.HOME }}/.vimrc"
+      become: true
+      when: ansible_os_family == "Debian"
+
+    - name: up the scrollback buffer on screen
+      copy:
+        content: |
+          defscrollback 65536
+        dest: "{{ ansible_env.HOME }}/.screenrc"
+
+  tasks:
+    - name: get openstack_deploy config
+      git:
+        repo: https://github.com/eb4x/openstack_deploy.git
+        dest: /etc/openstack_deploy
+        #version: master
+      environment: "{{ proxy_env }}"
+      become: true
+
+    - name: create ssl directory
+      file:
+        state: directory
+        path: /etc/openstack_deploy/ssl
+      become: true
+
+    - name: copy sensitive files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      become: true
+      with_items:
+        - src:   "etc/openstack_deploy/user_secrets.{{ openstack_version.split('/')[1] }}.yml"
+          dest: "/etc/openstack_deploy/user_secrets.yml"
+        #- src:   "etc/openstack_deploy/ssl/{{ external_lb_vip_address }}.key"
+        #  dest: "/etc/openstack_deploy/ssl/{{ external_lb_vip_address }}.key"
+        #- src:   "etc/openstack_deploy/ssl/{{ external_lb_vip_address }}.pem"
+        #  dest: "/etc/openstack_deploy/ssl/{{ external_lb_vip_address }}.pem"
+
+    - name: get openstack-ansible
+      git:
+        repo: https://github.com/openstack/openstack-ansible.git
+        dest: "{{ ansible_env.HOME }}/src/openstack-ansible"
+        version: "{{ openstack_tag | default(openstack_version) }}"
+        force: true
+      environment: "{{ proxy_env }}"
+
+    - name: link openstack-ansible to /opt
+      file:
+        path: "/opt/openstack-ansible"
+        src: "{{ ansible_env.HOME }}/src/openstack-ansible"
+        state: link
+      become: true
+
+    - name: fix bootstrap-ansible.sh for ubuntu 20.04
+      replace:
+        path: "/opt/openstack-ansible/scripts/bootstrap-ansible.sh"
+        regexp: "^(\\s+)python-minimal python-dev(.*)$"
+        replace: "\\1python2-minimal python-dev\\2"
+      when:
+        - ansible_distribution_release == "focal"
+        - openstack_version == "stable/train"
+
+    - name: bootstrap-ansible
+      command: /opt/openstack-ansible/scripts/bootstrap-ansible.sh
+      args:
+        creates: /opt/ansible-runtime
+      environment: "{{ proxy_env }}"
+      register: _bootstrap_ansible
+      become: true
+
+    - include_tasks: openstack-ansible-{{ openstack_version.split('/')[1] }}-patches.yml
+      when: _bootstrap_ansible is changed
+
+- import_playbook: openstack-ansible-deployment-key.yml
+- import_playbook: openstack-ansible-lvm.yml

@@ -1,0 +1,20 @@
+---
+- name: cherry-pick fixes to ceph_client
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/ceph_client/
+  with_items:
+    - "3cf97d2780c469b2e410fbff76007b2115e2a4c0" # Remove trailing '/' from ceph_apt_repo_url
+  environment: "{{ proxy_env }}"
+  become: true
+
+- name: avoid tempest like the plague
+  replace:
+    path: "/opt/openstack-ansible/playbooks/setup-openstack.yml"
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - regexp:  "^- (.*): os-tempest-install.yml$"
+      replace: "#- \\1: os-tempest-install.yml"
+    - regexp:  "^  when: \\(tempest_install(.*)$"
+      replace: "#  when: (tempest_install\\1"
