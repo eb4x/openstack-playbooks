@@ -1,0 +1,69 @@
+---
+- name: Configure the host running openstack-ansible
+  hosts:
+    - openstack_ansible
+
+  vars:
+    external_lb_vip_address: openstack.slipsprogrammor.no
+
+    openstack_version: "stable/train"
+    openstack_tag: "20.1.6"
+
+    proxy_env:
+      http_proxy: "http://192.168.3.1:8000"
+      https_proxy: "http://192.168.3.1:8000"
+
+  tasks:
+    - name: get openstack-ansible
+      git:
+        repo: https://github.com/openstack/openstack-ansible.git
+        dest: "{{ ansible_env.HOME }}/src/openstack-ansible"
+        version: "{{ openstack_tag | default(openstack_version) }}"
+        force: true
+      environment: "{{ proxy_env }}"
+
+    - name: link openstack-ansible to /opt
+      file:
+        path: "/opt/openstack-ansible"
+        src: "{{ ansible_env.HOME }}/src/openstack-ansible"
+        state: link
+      become: true
+
+    - name: fix bootstrap-ansible.sh for ubuntu 20.04
+      replace:
+        path: "/opt/openstack-ansible/scripts/bootstrap-ansible.sh"
+        regexp: "^(\\s+)python-minimal python-dev(.*)$"
+        replace: "\\1python2-minimal python-dev\\2"
+      when:
+        - ansible_distribution_release == "focal"
+        - openstack_version == "stable/train"
+
+    # We want to apply patches/cherry-pics on /etc/ansible/roles and don't want
+    # run-upgrade.sh to re-bootstrap-ansible and clear those patches.
+    - name: comment out bootstrap-ansible
+      lineinfile:
+        path: "/opt/openstack-ansible/scripts/run-upgrade.sh"
+        backrefs: true
+        regexp: "^([^#].*)/bootstrap-ansible.sh\""
+        line: "#\\1/bootstrap-ansible.sh\""
+      register: _run_upgrade_regexp
+
+    - block:
+        - name: clear out /etc/ansible/roles
+          file:
+            path: /etc/ansible/roles
+            state: absent
+          become: true
+
+        - name: run bootstrap-ansible manually
+          command: /opt/openstack-ansible/scripts/bootstrap-ansible.sh
+          environment: "{{ proxy_env }}"
+          register: _bootstrap_ansible
+          become: true
+
+        - name: apply additonal patches
+          include_tasks: openstack-ansible-patches-{{ openstack_version.split('/')[1] }}.yml
+      when: _run_upgrade_regexp is changed
+
+- import_playbook: openstack-ansible-deployment-key.yml
+- import_playbook: openstack-ansible-lvm.yml

@@ -98,7 +98,8 @@
       register: _bootstrap_ansible
       become: true
 
-    - include_tasks: openstack-ansible-{{ openstack_version.split('/')[1] }}-patches.yml
+    - name: apply additional patches
+      include_tasks: openstack-ansible-patches-{{ openstack_version.split('/')[1] }}.yml
       when: _bootstrap_ansible is changed
 
 - import_playbook: openstack-ansible-deployment-key.yml
