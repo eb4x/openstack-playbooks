@@ -61,9 +61,9 @@
           register: _bootstrap_ansible
           become: true
 
-        - name: apply additonal patches
-          include_tasks: openstack-ansible-patches-{{ openstack_version.split('/')[1] }}.yml
+        - name: apply additional patches
+          include_tasks: common/patches-{{ openstack_version.split('/')[1] }}.yml
       when: _run_upgrade_regexp is changed
 
-- import_playbook: openstack-ansible-deployment-key.yml
-- import_playbook: openstack-ansible-lvm.yml
+- import_playbook: deployment-key.yml
+- import_playbook: lvm.yml
