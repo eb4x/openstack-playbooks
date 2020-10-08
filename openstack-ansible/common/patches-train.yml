@@ -6,6 +6,25 @@
   with_items:
     - "3cf97d2780c469b2e410fbff76007b2115e2a4c0" # Remove trailing '/' from ceph_apt_repo_url
   environment: "{{ proxy_env }}"
+
+- name: cherry-pick fixes to haproxy_server
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/haproxy_server
+  with_items:
+    - b7834dd051cff7d6c26a2f92159099d743256836 # Add support for extra VIPs with TLS enabled
+    - 693cdb1afc65bd30375cb08a10c5aaabec9a366d # Align the usage of the two extra lb vip parameters
+    - 049b479b65a700815bd4bbec165e72e33a8fe627 # Add options to override which addresses haproxy binds to
+    - f35867466c02fccbf009ea103580c120b225e371 # Add extra controls for frontend redirects
+    - 04932a7c74b5cb8e7247019b141e3ddeddb072be # Allow extra parameters to be passed to certbot
+    - ba3a89944bee0d76753e55f029e53aaf685f7541 # Allow multiple methods of installing certbot
+    - 1d386a57f527bde36153e5606c3c8189899007ae # Add option to use distro provided certbot package
+    - a254facacf3706a83385e42ac0d76f859c9355bd # Install self-signed certificate before certbot has run for the first time
+    - 28eb2c1d1dbb3963c17c24d8ac5d43c6b0fcdc6e # Add documentation for HA HAProxy with LetsEncrypt certificates
+    - dbc8fe1fe2ec675655624ec7ee3996b20ee6e7a4 # Use a certbot pre-hook to ensure haproxy backend is up before renewal
+    - 449aa69edc835c722bf6f304a0bd581f9388fe88 # Allow frontend acl to be undefined.
+    - 5fba658296634c9f32581c965c8510ff6cdf2b90 # Ensure there is no race between haproxy and certbot for initial cert
+    - 0343893881dce50bf9786265e4b2ea77972114b6 # Define http-01 params with already provided variables
   become: true
 
 - name: cherry-pick fixes to lxc_container_create
@@ -23,7 +42,16 @@
   args:
     chdir: /opt/openstack-ansible
   with_items:
+    - 9d7969f5880b5cd69c7a22e549d9e7f71843cf2c # Add documentation for deploying letsencrypt certificates
     - 9c0303398182361752d48193f4e7a38597647b18 # Remove git repo haproxy backend
+
+- name: cherry-pick fixes to openstack-ansible
+  shell: "{{ item }}"
+  environment: "{{ proxy_env }}"
+  args:
+    chdir: /opt/openstack-ansible
+  with_items:
+    - "git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/27/751327/4 && git cherry-pick FETCH_HEAD" # Simplify path for letsencrypt usage
 
 - name: avoid tempest like the plague
   replace:
@@ -35,3 +63,5 @@
       replace: "#- \\1: os-tempest-install.yml"
     - regexp:  "^  when: \\(tempest_install(.*)$"
       replace: "#  when: (tempest_install\\1"
+
+# vim: nowrap
