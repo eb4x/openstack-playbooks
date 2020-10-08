@@ -1,0 +1,53 @@
+---
+- name: "get current images list for fedora-coreos {{ stream }}"
+  uri:
+    url: "https://builds.coreos.fedoraproject.org/streams/{{ stream }}.json"
+    return_content: true
+  register: _current
+
+- set_fact:
+    openstack_image_info: "{{ _current.json.architectures.x86_64.artifacts['openstack'] }}"
+
+- name: "check for decompressed fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.qcow2"
+  stat:
+    path: "{{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.qcow2"
+  register: _decompressed
+
+- debug:
+    var: openstack_image_info.formats['qcow2.xz'].disk.location
+- debug:
+    var: openstack_image_info.formats['qcow2.xz'].disk.sha256
+
+- name: "download fedora-coreos {{ openstack_image_info.release }} image"
+  get_url:
+    url:             "{{ openstack_image_info.formats['qcow2.xz'].disk.location }}"
+    checksum: "sha256:{{ openstack_image_info.formats['qcow2.xz'].disk.sha256 }}"
+    dest: "{{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.qcow2.xz"
+  when: _decompressed.stat.exists == false
+
+- name: "decompress fedora-coreos {{ openstack_image_info.release }} image"
+  command: >-
+    xz --decompress \
+    {{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.qcow2.xz
+  args:
+    creates: "{{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.qcow2"
+
+- name: "convert fedora-coreos {{ openstack_image_info.release }} qcow2 => raw"
+  command: >-
+    qemu-img convert -f qcow2 -O raw \
+    {{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.qcow2
+    {{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.raw
+  args:
+    creates: "{{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.raw"
+
+- name: "upload fedora-coreos {{ openstack_image_info.release }} to openstack"
+  os_image:
+    cloud: "{{ os_cloud }}"
+    validate_certs: false
+    #<<: *os_cloud_auth
+    filename: "{{ os_image_dir }}/fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64.raw"
+    name: "fedora-coreos-{{ openstack_image_info.release }}-openstack.x86_64"
+    disk_format: raw
+    is_public: true
+    properties:
+      os_distro: fedora-coreos

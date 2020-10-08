@@ -1,0 +1,61 @@
+---
+#- name: get current images list
+#  uri:
+#    url: http://cloud-images.ubuntu.com/releases/streams/v1/com.ubuntu.cloud:released:download.json
+#    return_content: true
+#  register: _current
+#
+#- set_fact:
+#    product: "com.ubuntu.cloud:server:{{ release.date }}:amd64"
+#- set_fact:
+#    openstack_image_info: "{{ _current.json.products[product] }}"
+#
+#- debug:
+#    var: openstack_image_info.versions
+
+- name: "get current images list for ubuntu {{ release.date }} {{ release.name }}"
+  uri:
+    url: "https://cloud-images.ubuntu.com/{{ release.name }}/current/"
+    return_content: true
+  register: _current
+- name: set build_date
+  set_fact:
+    # match anything but "]")
+    build_date: "{{ _current.content | regex_findall(\"<title>.*Daily Build \\[([^\\]]+)\\].*</title>\") | first }}"
+
+- name: "get current images checksums for ubuntu {{ release.date }} {{ release.name }}"
+  uri:
+    url: "https://cloud-images.ubuntu.com/{{ release.name }}/current/SHA256SUMS"
+    return_content: true
+  register: _checksums
+
+- name: "set checksum for ubuntu {{ release.date }} {{ release.file }}"
+  set_fact:
+    sha256sum: "{{ _checksums.content | regex_findall(regstr) | first }}"
+  vars:
+    regstr: "(.*) \\*{{ release.file }}"
+
+- name: "download ubuntu {{ release.date }} {{ build_date }} {{ release.name }} image"
+  get_url:
+    url: "https://cloud-images.ubuntu.com/{{ release.name }}/current/{{ release.file }}"
+    checksum: "sha256:{{ sha256sum }}"
+    #checksum: sha256:https://cloud-images.ubuntu.com/{{ release.name }}/current/SHA256SUMS
+    dest: "{{ os_image_dir }}/ubuntu-{{ release.date }}-{{ build_date }}-{{ release.name }}-server-cloudimg-amd64.qcow2"
+
+- name: "convert ubuntu {{ release.date }} {{ build_date }} {{ release.name }} qcow2 => raw"
+  command: >-
+    qemu-img convert -f qcow2 -O raw \
+    {{ os_image_dir }}/ubuntu-{{ release.date }}-{{ build_date }}-{{ release.name }}-server-cloudimg-amd64.qcow2
+    {{ os_image_dir }}/ubuntu-{{ release.date }}-{{ build_date }}-{{ release.name }}-server-cloudimg-amd64.raw
+  args:
+    creates: "{{ os_image_dir }}/ubuntu-{{ release.date }}-{{ build_date }}-{{ release.name }}-server-cloudimg-amd64.raw"
+
+- name: "upload ubuntu {{ release.date }} {{ build_date }} {{ release.name }} to openstack"
+  os_image:
+    cloud: "{{ os_cloud }}"
+    validate_certs: false
+    #<<: *os_cloud_auth
+    filename: "{{ os_image_dir }}/ubuntu-{{ release.date }}-{{ build_date }}-{{ release.name }}-server-cloudimg-amd64.raw"
+    name: "ubuntu-{{ release.date }}-{{ build_date }}-{{ release.name }}-server-cloudimg-amd64"
+    disk_format: raw
+    is_public: true

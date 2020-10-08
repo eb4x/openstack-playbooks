@@ -1,0 +1,54 @@
+---
+- name: get latest cirros release
+  uri:
+    url: https://download.cirros-cloud.net/version/released
+    return_content: true
+  register: _cirros_released
+
+- name: set cirros_version
+  set_fact:
+    cirros_version: "{{ _cirros_released.content | trim }}"
+- name: set cirros_major
+  set_fact:
+    cirros_major: "{{ cirros_version | regex_replace(\"(\\d+\\.\\d+).*\", \"\\1\") }}"
+
+- name: get details on cirros releases
+  uri:
+    url: https://download.cirros-cloud.net/streams/v1/net.cirros-cloud:released:download.json
+    return_content: true
+  register: _cirros_releases
+
+- name: set cirros_product
+  set_fact:
+    cirros_product: "net.cirros-cloud:standard:{{ cirros_major }}:x86_64"
+- name: set cirros_latest
+  set_fact:
+    cirros_latest: "{{ _cirros_releases.json.products[cirros_product].versions | json_query(query) }}"
+  vars:
+    query: "*[].{items: items, version: version} | [?version=='{{ cirros_version }}'] | [0]"
+
+# items is a keyword, so you can't do cirros_latest.items, but you can do cirros_latest['items']
+- name: "download cirros {{ cirros_version }} image"
+  get_url:
+    url: "https://github.com/cirros-dev/cirros/releases/download/{{ cirros_latest['items']['disk.img'].path }}"
+    #url: "https://download.cirros-cloud.net/{{ cirros_latest['items']['disk.img'].path }}"
+    checksum: "sha256:{{ cirros_latest['items']['disk.img'].sha256 }}"
+    dest: "{{ os_image_dir }}/{{ cirros_latest['items']['disk.img'].path | basename }}"
+
+- name: "convert cirros {{ cirros_version }} qcow2 => raw"
+  command: >-
+    qemu-img convert -f qcow2 -O raw \
+    {{ os_image_dir }}/{{ cirros_latest['items']['disk.img'].path | basename }}
+    {{ os_image_dir }}/{{ cirros_latest['items']['disk.img'].path | basename | regex_replace('\.img$', '.raw') }}
+  args:
+    creates: "{{ os_image_dir }}/{{ cirros_latest['items']['disk.img'].path | basename | regex_replace('\\.img$', '.raw') }}"
+
+- name: "upload cirros {{ cirros_version }} to openstack"
+  os_image:
+    cloud: "{{ os_cloud }}"
+    validate_certs: false
+    #<<: *os_cloud_auth
+    filename: "{{ os_image_dir }}/{{ cirros_latest['items']['disk.img'].path | basename | regex_replace('\\.img$', '.raw') }}"
+    name: "{{ cirros_latest['items']['disk.img'].path | basename | regex_replace('\\.img$', '') }}"
+    disk_format: raw
+    is_public: true

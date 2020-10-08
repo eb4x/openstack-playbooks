@@ -1,0 +1,44 @@
+---
+- name: Get latest images
+  hosts: messy-maas
+  vars:
+    os_cloud: slipsprogrammor-admin
+
+    os_cloud_auth: &os_cloud_auth
+      cloud: "{{ os_cloud }}"
+      validate_certs: false
+
+    os_image_dir: "{{ ansible_env.HOME }}/openstack-images"
+
+  pre_tasks:
+    - name: create os_image_dir
+      file:
+        state: directory
+        path: "{{ os_image_dir }}"
+
+  tasks:
+    - include_tasks: images-cirros.yml
+
+    - include_tasks: images-centos.yml
+      loop_control:
+        loop_var: release
+      with_items:
+        - { build: 2003, file: CentOS-7-x86_64-GenericCloud-2003.raw.tar.gz }
+#        - { build: 2004, file: CentOS-8-GenericCloud-8.2.2004-20200611.2.x86_64.qcow2 }
+#https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.2.2004-20200611.2.x86_64.qcow2
+
+    - include_tasks: images-fcos.yml
+      loop_control:
+        loop_var: stream
+      with_items:
+        - stable
+        #- testing
+        #- next
+
+    - include_tasks: images-ubuntu.yml
+      loop_control:
+        loop_var: release
+      with_items:
+        - { date: 16.04, name: xenial, file: xenial-server-cloudimg-amd64-disk1.img }
+        - { date: 18.04, name: bionic, file: bionic-server-cloudimg-amd64.img }
+        - { date: 20.04, name: focal,  file: focal-server-cloudimg-amd64.img }
