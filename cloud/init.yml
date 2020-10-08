@@ -1,0 +1,207 @@
+---
+- name: Populate Openstack installation
+  hosts: messy-maas
+
+  vars:
+    os_cloud: slipsprogrammor-admin
+
+    os_cloud_auth: &os_cloud_auth
+      cloud: "{{ os_cloud }}"
+      validate_certs: false
+
+    clouds_openstack_yaml: &clouds_openstack_yaml
+      auth:
+        auth_url: "{{ ansible_env.OS_AUTH_URL | default('https://192.168.3.9:5000') }}"
+        project_domain_id: "{{ ansible_env.OS_PROJECT_DOMAIN_ID | default('default') }}"
+        #project_id: "{{ ansible_env.OS_PROJECT_ID }}"
+        project_name: "{{ ansible_env.OS_PROJECT_NAME | default('admin') }}"
+        user_domain_name: "{{ ansible_env.OS_USER_DOMAIN_NAME | default('Default') }}"
+        username: "{{ ansible_env.OS_USERNAME | default('admin') }}"
+        password: "{{ ansible_env.OS_PASSWORD | default( (_user_secrets.content | b64decode | from_yaml)['keystone_auth_admin_password'] ) }}"
+      region_name: "{{ ansible_env.OS_REGION_NAME | default('RegionOne') }}"
+      validate_certs: false
+
+  pre_tasks:
+#    - set_fact:
+#        ansible_env: "{{ ansible_env | combine({ 'PATH': ansible_env.HOME + '/.local/bin:' + ansible_env.PATH }) }}"
+#      when:
+#        - ansible_env.PATH is search("{{ ansible_env.HOME }}/.local/bin")
+
+    - pip:
+        extra_args: "--user"
+        name:
+          - python-openstackclient
+          - os-client-config
+
+    - name: check for clouds.yaml
+      stat:
+        path: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
+      register: _clouds_yaml
+
+    - block:
+        - name: create dir for openstack config
+          file:
+            state: directory
+            path: "{{ ansible_env.HOME }}/.config/openstack"
+        - name: create blank cloud config
+          copy:
+            content: |
+              ---
+              clouds: {}
+            dest: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
+      when: _clouds_yaml.stat.exists == false
+
+    - name: read clouds.yaml, giving us the variable clouds
+      include_vars: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
+
+    - name: get user_secrets.yml
+      slurp:
+        src: /etc/openstack_deploy/user_secrets.yml
+      become: true
+      delegate_to: osa
+      register: _user_secrets
+
+    - name: update our clouds variable with our openstack_cloud
+      set_fact:
+        clouds: "{{ clouds | combine({ os_cloud : clouds_openstack_yaml }) }}"
+
+    - name: write clouds variable back to clouds.yaml
+      copy:
+        content: |
+          ---
+          clouds:
+            {{ clouds | to_nice_yaml(indent=2) | indent(2) }}
+        dest: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
+        backup: true
+
+    - name: create bash-completion user_dir
+      file:
+        state: directory
+        path: "{{ ansible_env.HOME }}/.local/share/bash-completion/completions"
+
+    - name: get bash-completion script for openstack_client
+      command: "{{ ansible_env.HOME }}/.local/bin/openstack complete"
+      changed_when: false
+      register: _openstack_complete
+
+    - name: save bash-completion script for openstack_client
+      copy:
+        content: "{{ _openstack_complete.stdout }}"
+        dest: "{{ ansible_env.HOME }}/.local/share/bash-completion/completions/openstack"
+
+  tasks:
+    - name: create projects
+      os_project:
+        <<: *os_cloud_auth
+        domain_id: "Default"
+        name: "{{ item.name }}"
+        description: "{{ item.description }}"
+      with_items:
+        - name: magnum
+          description: "testing magnum"
+        - name: openshift-blue
+          description: "testing okd4"
+        - name: openshift-green
+          description: "testing okd4"
+        - name: saltstack
+          description: "testing salt-cloud"
+
+    - name: add users
+      os_user:
+        <<: *os_cloud_auth
+        domain: "Default"
+        name: "{{ username }}"
+        password: "{{ lookup('password', '~/.openstack_' + username + '_password') }}"
+      with_items:
+        - erikberg
+      loop_control:
+        loop_var: username
+
+    - name: add admin to projects
+      os_user_role:
+        <<: *os_cloud_auth
+        project: "{{ item.project }}"
+        role: _member_
+        user: admin
+      with_items:
+        - project: magnum
+        - project: openshift-blue
+        - project: openshift-green
+        - project: saltstack
+
+    - name: add erikberg to projects
+      os_user_role:
+        <<: *os_cloud_auth
+        project: "{{ item.project }}"
+        role: _member_
+        user: erikberg
+      with_items:
+        - project: magnum
+        - project: openshift-blue
+        - project: openshift-green
+        - project: saltstack
+
+    - name: add keypairs
+      os_keypair:
+        <<: *os_cloud_auth
+        name: "{{ item.name }}"
+        public_key: "{{ item.public_key }}"
+      with_items:
+        - name: erikberg
+          public_key: "{{ lookup('file', '~/.ssh/id_ecdsa.pub') }}"
+
+    - name: add flavors
+      openstack.cloud.compute_flavor:
+        <<: *os_cloud_auth
+        name: "{{ item.name }}"
+        ram: "{{ item.ram }}"
+        disk: "{{ item.disk }}"
+        vcpus: "{{ item.vcpus }}"
+      with_items:
+        - { name: m1.tiny,   ram:   512, disk:   1, vcpus: 1 }
+        - { name: m1.small,  ram:  2048, disk:  20, vcpus: 1 }
+        - { name: m1.medium, ram:  4096, disk:  40, vcpus: 2 }
+        - { name: m1.large,  ram:  8192, disk:  80, vcpus: 4 }
+        - { name: m1.xlarge, ram: 16384, disk: 160, vcpus: 8 }
+
+    - include_tasks: network.yml
+      loop_control:
+        loop_var: network
+      with_items:
+        - project: "{{ clouds[os_cloud].auth.project_name }}" #_id
+          name: maas
+          shared: true
+          external: true
+          provider_network_type: vlan
+          provider_physical_network: physnet1
+          provider_segmentation_id: 3
+          subnet:
+            name: maas-sub
+            cidr: 192.168.3.0/24
+            allocation_pool_start: 192.168.3.100
+            allocation_pool_end: 192.168.3.200
+            #gateway_ip: 192.168.3.254
+        - project: "{{ clouds[os_cloud].auth.project_name }}" #_id
+          name: network0
+          subnet:
+            name: subnet0
+            cidr: 192.168.0.0/24
+          router:
+            name: router0
+            external_gateway: maas
+        - project: openshift-blue
+          name: os-blue-net
+          subnet:
+            name: os-blue-subnet
+            cidr: 172.16.0.0/24
+          router:
+            name: router0
+            external_gateway: maas
+        - project: openshift-green
+          name: os-green-net
+          subnet:
+            name: os-green-subnet
+            cidr: 172.16.0.0/24
+          router:
+            name: router0
+            external_gateway: maas

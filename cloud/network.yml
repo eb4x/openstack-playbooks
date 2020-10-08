@@ -1,0 +1,47 @@
+---
+- name:
+  os_network:
+    cloud: "{{ os_cloud }}"
+    validate_certs: false
+    #<<: *os_cloud_auth
+    project: "{{ network.project | default(omit) }}"
+    name: "{{ network.name }}"
+    shared: "{{ network.shared | default(false) }}"
+    external: "{{ network.external | default(false) }}"
+    provider_network_type: "{{ network.provider_network_type | default(omit) }}"
+    provider_physical_network: "{{ network.provider_physical_network | default(omit) }}"
+    provider_segmentation_id: "{{ network.provider_segmentation_id | default(omit) }}"
+  register: _network
+
+- debug:
+    var: _network
+
+- name:
+  os_subnet:
+    cloud: "{{ os_cloud }}"
+    validate_certs: false
+    #<<: *os_cloud_auth
+    project: "{{ network.project }}"
+    network_name: "{{ network.name }}"
+    name: "{{ network.subnet.name }}"
+    cidr: "{{ network.subnet.cidr }}"
+    allocation_pool_start: "{{ network.subnet.allocation_pool_start | default(omit) }}"
+    allocation_pool_end: "{{ network.subnet.allocation_pool_end | default(omit) }}"
+    gateway_ip: "{{ network.subnet.gateway_ip | default(omit) }}"
+  register: _subnet
+  when: network.subnet is defined
+
+- debug:
+    var: _subnet
+
+- name:
+  os_router:
+    cloud: "{{ os_cloud }}"
+    validate_certs: false
+    #<<: *os_cloud_auth
+    project: "{{ network.project }}"
+    name: "{{ network.router.name }}"
+    network: "{{ network.router.external_gateway }}"
+    interfaces:
+      - "{{ network.subnet.name }}"
+  when: network.router is defined
