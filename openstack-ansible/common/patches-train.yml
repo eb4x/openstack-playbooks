@@ -37,6 +37,14 @@
     - "git fetch https://review.opendev.org/openstack/openstack-ansible-lxc_container_create refs/changes/96/756096/4 && git cherry-pick FETCH_HEAD" # Allow user to override UseDNS in template
   become: true
 
+- name: cherry-pick fixes to os_cinder
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/os_cinder
+  with_items:
+    - "f5ba9b5b9a88ab09f3d6afded011976525c863a3" # Set correct permissions for rootwrap.d
+  become: true
+
 - name: cherry-pick fixes to openstack-ansible
   command: "git cherry-pick {{ item }}"
   args:
