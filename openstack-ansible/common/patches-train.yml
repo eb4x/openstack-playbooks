@@ -52,14 +52,7 @@
   with_items:
     - 9d7969f5880b5cd69c7a22e549d9e7f71843cf2c # Add documentation for deploying letsencrypt certificates
     - 9c0303398182361752d48193f4e7a38597647b18 # Remove git repo haproxy backend
-
-- name: cherry-pick fixes to openstack-ansible
-  shell: "{{ item }}"
-  environment: "{{ proxy_env }}"
-  args:
-    chdir: /opt/openstack-ansible
-  with_items:
-    - "git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/27/751327/4 && git cherry-pick FETCH_HEAD" # Simplify path for letsencrypt usage
+    - a0761a0e66aebad2951473e676c603cca59fe567 # Simplify path for letsencrypt usage
 
 - name: avoid tempest like the plague
   replace:
