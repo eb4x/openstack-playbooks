@@ -3,18 +3,45 @@
   hosts:
     - openstack_ansible
 
-  tasks:
+  pre_tasks:
     - name: create host_vars dir
       file:
         path: /etc/openstack_deploy/host_vars
         state: directory
       become: true
 
-    - name: update /etc/openstack_deploy/host_vars/
+    - name: "stat for host_vars/{{ hostname }}.yml"
+      stat:
+        path: "/etc/openstack_deploy/host_vars/{{ hostname }}.yml"
+      with_items: "{{ groups['openstack'] }}"
+      loop_control:
+        loop_var: hostname
+      when:
+        - hostvars[hostname].lvm_volumes is defined
+      register: _host_vars
+
+    - name: create header file
       copy:
         content: |
           ---
-          #[osds.yml]
+          #[osds.yml] BEGIN
+          #[osds.yml] END
+        dest: "/etc/openstack_deploy/host_vars/{{ hostname }}.yml"
+      with_items: "{{ groups['openstack'] }}"
+      loop_control:
+        loop_var: hostname
+      when:
+        - hostvars[hostname].lvm_volumes is defined
+        - _host_vars.results | json_query(stat_exists) == false
+      vars:
+        stat_exists: "[?hostname=='{{ hostname }}'].stat.exists | [0]"
+      become: true
+
+  tasks:
+    - name: update /etc/openstack_deploy/host_vars/
+      blockinfile:
+        marker: "#[osds.yml] {mark}"
+        block: |
           lvm_volumes:
           {% for device in (hostvars[hostname].lvm_volumes | sort) %}
             - { data_vg: {{ hostvars[hostname].lvm_volumes[device].data_vg }}, data: {{ hostvars[hostname].lvm_volumes[device].data }} }
@@ -23,6 +50,5 @@
       with_items: "{{ groups['openstack'] }}"
       loop_control:
         loop_var: hostname
-      when:
-        - hostvars[hostname].lvm_volumes is defined
+      when: hostvars[hostname].lvm_volumes is defined
       become: true
