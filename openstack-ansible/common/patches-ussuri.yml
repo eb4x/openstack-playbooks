@@ -1,0 +1,60 @@
+---
+- name: cherry-pick fixes to haproxy_server
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/haproxy_server
+  with_items:
+    - 0343893881dce50bf9786265e4b2ea77972114b6 # Define http-01 params with already provided variables
+  become: true
+
+- name: cherry-pick fixes to lxc_container_create
+  shell: "{{ item }}"
+  environment: "{{ proxy_env }}"
+  args:
+    chdir: /etc/ansible/roles/lxc_container_create
+  with_items:
+    - "git fetch https://review.opendev.org/openstack/openstack-ansible-lxc_container_create refs/changes/88/756088/2 && git cherry-pick FETCH_HEAD" # Allow user to override UseRoutes in template
+    - "git fetch https://review.opendev.org/openstack/openstack-ansible-lxc_container_create refs/changes/96/756096/4 && git cherry-pick FETCH_HEAD" # Allow user to override UseDNS in template
+  become: true
+
+- name: cherry-pick fixes to os_cinder
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/os_cinder
+  with_items:
+    - "f5ba9b5b9a88ab09f3d6afded011976525c863a3" # Set correct permissions for rootwrap.d
+  become: true
+
+- name: cherry-pick fixes to os_nova
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/os_nova
+  with_items:
+    - "1958a954b989e391567be4632d794c22ce03bff6" # Simplify scheduler filter additions
+  become: true
+
+- name: cherry-pick fixes to openstack-ansible
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /opt/openstack-ansible
+  with_items:
+    - a0761a0e66aebad2951473e676c603cca59fe567 # Simplify path for letsencrypt usage
+
+- name: apply patches to run-upgrade.sh for ceph upgrades
+  shell: "git stash && git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/82/758382/1 && git cherry-pick FETCH_HEAD && git stash pop"
+  environment: "{{ proxy_env }}"
+  args:
+    chdir: "/opt/openstack-ansible"
+
+- name: avoid tempest like the plague
+  replace:
+    path: "/opt/openstack-ansible/playbooks/setup-openstack.yml"
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - regexp:  "^- (.*): os-tempest-install.yml$"
+      replace: "#- \\1: os-tempest-install.yml"
+    - regexp:  "^  when: \\(tempest_install(.*)$"
+      replace: "#  when: (tempest_install\\1"
+
+# vim: nowrap
