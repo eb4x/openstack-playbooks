@@ -45,6 +45,14 @@
     - "f5ba9b5b9a88ab09f3d6afded011976525c863a3" # Set correct permissions for rootwrap.d
   become: true
 
+- name: cherry-pick fixes to os_nova
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/os_nova
+  with_items:
+    - "1958a954b989e391567be4632d794c22ce03bff6" # Simplify scheduler filter additions
+  become: true
+
 - name: cherry-pick fixes to openstack-ansible
   command: "git cherry-pick {{ item }}"
   args:
