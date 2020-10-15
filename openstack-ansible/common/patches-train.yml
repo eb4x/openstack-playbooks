@@ -62,6 +62,12 @@
     - 9c0303398182361752d48193f4e7a38597647b18 # Remove git repo haproxy backend
     - a0761a0e66aebad2951473e676c603cca59fe567 # Simplify path for letsencrypt usage
 
+- name: apply patches to run-upgrade.sh for ceph upgrades
+  shell: "git stash && git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/78/710778/6 && git cherry-pick FETCH_HEAD && git stash pop"
+  environment: "{{ proxy_env }}"
+  args:
+    chdir: "/opt/openstack-ansible"
+
 - name: avoid tempest like the plague
   replace:
     path: "/opt/openstack-ansible/playbooks/setup-openstack.yml"
