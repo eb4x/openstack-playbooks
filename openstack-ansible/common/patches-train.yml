@@ -1,12 +1,4 @@
 ---
-- name: cherry-pick fixes to ceph_client
-  command: "git cherry-pick {{ item }}"
-  args:
-    chdir: /etc/ansible/roles/ceph_client
-  with_items:
-    - "3cf97d2780c469b2e410fbff76007b2115e2a4c0" # Remove trailing '/' from ceph_apt_repo_url
-  become: true
-
 - name: cherry-pick fixes to haproxy_server
   command: "git cherry-pick {{ item }}"
   args:

@@ -7,7 +7,7 @@
     external_lb_vip_address: openstack.slipsprogrammor.no
 
     #openstack_version: "stable/train"
-    #openstack_tag: "20.1.6"
+    #openstack_tag: "20.1.7"
 
     openstack_version: "stable/ussuri"
     openstack_tag: "21.1.0"
