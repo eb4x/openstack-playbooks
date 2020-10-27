@@ -99,7 +99,7 @@
       become: true
 
     - name: apply additional patches
-      include_tasks: common/patches-{{ openstack_version.split('/')[1] }}.yml
+      include_tasks: patches/{{ openstack_version.split('/')[1] }}.yml
       when: _bootstrap_ansible is changed
 
 - import_playbook: deployment-key.yml

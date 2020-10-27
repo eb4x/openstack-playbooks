@@ -69,7 +69,7 @@
       become: true
 
     - name: apply additional patches
-      include_tasks: common/patches-{{ openstack_version.split('/')[1] }}.yml
+      include_tasks: patches/{{ openstack_version.split('/')[1] }}.yml
 
 - import_playbook: deployment-key.yml
 - import_playbook: lvm.yml
