@@ -5,16 +5,15 @@
   tasks:
     - name: generate deployment key
       openssh_keypair:
-        type: ecdsa
-        size: 384
-        path: /root/.ssh/id_ecdsa
+        type: ed25519
+        path: /root/.ssh/id_ed25519
       become: true
-      register: _id_ecdsa
+      register: _id_keypair
 
     - name: propagate deployment key
       authorized_key:
         user: root
-        key: "{{ _id_ecdsa.public_key }} {{ inventory_hostname }}"
+        key: "{{ _id_keypair.public_key }} {{ inventory_hostname }}"
       become: true
       delegate_to: "{{ item }}"
       with_items: "{{ groups['openstack'] }}"
