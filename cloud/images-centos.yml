@@ -1,31 +1,35 @@
 ---
-- name: "check for decompressed centos-7-x86_64-genericcloud-{{ release.build }}.raw"
-  stat:
-    path: "{{ os_image_dir }}/centos-7-x86_64-genericcloud-{{ release.build }}.raw"
-  register: _decompressed
+- name: "set centos {{ release.version + ' ' + release.arch + ' ' + release.build }} url"
+  set_fact:
+    centos_url: >-
+      https://cloud.centos.org/centos/{{ release.version[0] }}/{{
+      (release.version[0] == '8') | ternary(release.arch + '/images', 'images') }}/CentOS-{{
+      release.version[0] }}{{ (release.version[0] == '8') | ternary('', '-' + release.arch) }}-GenericCloud-{{
+      (release.version[0] == '8') | ternary(
+        release.version + '.' + release.build + '-' + release.date + '.' + release.arch,
+        release.build
+      ) }}.qcow2
 
-- name: "download centos 7 {{ release.build }} image"
+- name: "download centos {{ release.version + ' ' + release.arch + ' ' + release.build }} image"
   get_url:
-    url: "https://cloud.centos.org/centos/7/images/{{ release.file }}"
-    checksum: "sha256:https://cloud.centos.org/centos/7/images/sha256sum.txt"
-    dest: "{{ os_image_dir }}/centos-7-x86_64-genericcloud-{{ release.build }}.raw.tar.gz"
-  when: _decompressed.stat.exists == false
+    url: "{{ centos_url }}"
+    checksum: "{{ (release.version[0] == '8') | ternary(omit, 'sha256:https://cloud.centos.org/centos/7/images/sha256sum.txt') }}"
+    dest: "{{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.qcow2"
 
-- name: "decompress centos 7 {{ release.build }} image"
+- name: "convert centos {{ release.version + ' ' + release.arch + ' ' + release.build }} qcow2 => raw"
   command: >-
-    tar --gunzip --extract --file \
-    {{ os_image_dir }}/centos-7-x86_64-genericcloud-{{ release.build }}.raw.tar.gz \
-    --transform 's/.*/\L&/'
+    qemu-img convert -f qcow2 -O raw
+    {{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.qcow2
+    {{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.raw
   args:
-    chdir: "{{ os_image_dir }}"
-    creates: "{{ os_image_dir }}/centos-7-x86_64-genericcloud-{{ release.build }}.raw"
+    creates: "{{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.raw"
 
-- name: "upload centos 7 {{ release.build }} to openstack"
+- name: "upload centos {{ release.version + ' ' + release.arch + ' ' + release.build }} to openstack"
   os_image:
     cloud: "{{ os_cloud }}"
     validate_certs: false
     #<<: *os_cloud_auth
-    filename: "{{ os_image_dir }}/centos-7-x86_64-genericcloud-{{ release.build }}.raw"
-    name: "centos-7-x86_64-genericcloud-{{ release.build }}"
+    filename: "{{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.raw"
+    name: "centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}"
     disk_format: raw
     is_public: true

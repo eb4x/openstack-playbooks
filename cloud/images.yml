@@ -23,9 +23,8 @@
       loop_control:
         loop_var: release
       with_items:
-        - { build: 2003, file: CentOS-7-x86_64-GenericCloud-2003.raw.tar.gz }
-#        - { build: 2004, file: CentOS-8-GenericCloud-8.2.2004-20200611.2.x86_64.qcow2 }
-#https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.2.2004-20200611.2.x86_64.qcow2
+        - { version: '7',   arch: x86_64, build: '2009', date: '20201112'   }
+        - { version: '8.3', arch: x86_64, build: '2011', date: '20201204.2' }
 
     - include_tasks: images-fcos.yml
       loop_control:
