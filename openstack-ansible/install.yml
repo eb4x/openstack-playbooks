@@ -7,7 +7,7 @@
     external_lb_vip_address: openstack.slipsprogrammor.no
 
     openstack_version: "stable/train"
-    openstack_tag: "20.1.6"
+    openstack_tag: "20.2.0"
 
     proxy_env:
       http_proxy: "http://192.168.3.1:8000"
@@ -90,7 +90,7 @@
         - ansible_distribution_release == "focal"
         - openstack_version == "stable/train"
 
-    - name: bootstrap-ansible
+    - name: run bootstrap-ansible manually
       command: /opt/openstack-ansible/scripts/bootstrap-ansible.sh
       args:
         creates: /opt/ansible-runtime
