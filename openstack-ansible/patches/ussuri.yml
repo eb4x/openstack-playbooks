@@ -7,6 +7,15 @@
     - 0343893881dce50bf9786265e4b2ea77972114b6 # Define http-01 params with already provided variables
   become: true
 
+- name: cherry-pick fixes to lxc_hosts
+  shell: "{{ item }}"
+  environment: "{{ proxy_env }}"
+  args:
+    chdir: /etc/ansible/roles/lxc_hosts
+  with_items:
+    - "git fetch https://review.opendev.org/openstack/openstack-ansible-lxc_hosts refs/changes/23/768723/1 && git cherry-pick FETCH_HEAD" # Use proxy if any proxy_vars are set
+  become: true
+
 - name: cherry-pick fixes to lxc_container_create
   shell: "{{ item }}"
   environment: "{{ proxy_env }}"
