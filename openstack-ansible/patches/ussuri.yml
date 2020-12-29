@@ -33,6 +33,15 @@
     - "1958a954b989e391567be4632d794c22ce03bff6" # Simplify scheduler filter additions
   become: true
 
+- name: cherry-pick fixes to os_neutron
+  shell: "{{ item }}"
+  environment: "{{ proxy_env }}"
+  args:
+    chdir: /etc/ansible/roles/os_neutron
+  with_items:
+    - "git fetch https://review.opendev.org/openstack/openstack-ansible-os_neutron refs/changes/22/768522/1 && git cherry-pick FETCH_HEAD" # Allow overriding firewall_driver for ovs
+  become: true
+
 - name: cherry-pick fixes to openstack-ansible
   command: "git cherry-pick {{ item }}"
   args:
