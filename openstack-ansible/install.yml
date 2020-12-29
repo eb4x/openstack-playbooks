@@ -38,6 +38,15 @@
           defscrollback 65536
         dest: "{{ ansible_env.HOME }}/.screenrc"
 
+    - name: setup proxy_env
+      lineinfile:
+        path: /etc/environment
+        regexp: "{{ item.key }}=.*"
+        line: "{{ item.key }}={{ item.value }}"
+      with_items: "{{ proxy_env | dict2items }}"
+      become: true
+      when: proxy_env is defined
+
   tasks:
     - name: get openstack_deploy config
       git:
