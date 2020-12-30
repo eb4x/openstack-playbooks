@@ -1,4 +1,14 @@
 ---
+- name: cherry-pick fixes to ceph-ansible
+  command: "git cherry-pick {{ item }}"
+  args:
+    chdir: /etc/ansible/roles/ceph-ansible
+  with_items:
+    - c733af9d43e572c97f301e7f704676f2ea5660dc # Fix Ansible check mode for site.yml.sample playbook
+    - f8a64ce4526c9a79f130aed6080a6d4271ba3e65 # ceph-crash: Only deploy key to targeted hosts
+    - 3d3ce263274d648f8fb376716f52b8b91b6f1313 # rolling_update: fix mgr start with mon collocation
+  become: true
+
 - name: cherry-pick fixes to haproxy_server
   command: "git cherry-pick {{ item }}"
   args:
@@ -58,7 +68,7 @@
     - a0761a0e66aebad2951473e676c603cca59fe567 # Simplify path for letsencrypt usage
 
 - name: apply patches to run-upgrade.sh for ceph upgrades
-  shell: "git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/82/758382/1 && git cherry-pick FETCH_HEAD"
+  shell: "git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/82/758382/2 && git cherry-pick FETCH_HEAD"
   environment: "{{ proxy_env }}"
   args:
     chdir: "/opt/openstack-ansible"
