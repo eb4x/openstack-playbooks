@@ -35,3 +35,4 @@
     is_public: true
     properties:
       hw_machine_type: q35
+      hw_video_model: qxl
