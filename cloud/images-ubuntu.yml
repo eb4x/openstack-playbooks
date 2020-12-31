@@ -59,3 +59,5 @@
     name: "ubuntu-{{ release.date }}-{{ build_date }}-{{ release.name }}-server-cloudimg-amd64"
     disk_format: raw
     is_public: true
+    properties:
+      hw_machine_type: q35

@@ -52,3 +52,5 @@
     name: "{{ cirros_latest['items']['disk.img'].path | basename | regex_replace('\\.img$', '') }}"
     disk_format: raw
     is_public: true
+    properties:
+      hw_machine_type: q35

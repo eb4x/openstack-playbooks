@@ -50,4 +50,5 @@
     disk_format: raw
     is_public: true
     properties:
+      hw_machine_type: q35
       os_distro: fedora-coreos
