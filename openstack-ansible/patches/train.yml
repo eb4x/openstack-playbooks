@@ -28,14 +28,6 @@
     - 8b3ff31c3a70e48239e7d5f349d7bab93779e9bc # Allow user to override UseDNS in template
   become: true
 
-- name: cherry-pick fixes to os_cinder
-  command: "git cherry-pick {{ item }}"
-  args:
-    chdir: /etc/ansible/roles/os_cinder
-  with_items:
-    - "f5ba9b5b9a88ab09f3d6afded011976525c863a3" # Set correct permissions for rootwrap.d
-  become: true
-
 - name: cherry-pick fixes to os_nova
   command: "git cherry-pick {{ item }}"
   args:
@@ -59,7 +51,6 @@
     chdir: /opt/openstack-ansible
   with_items:
     - 9d7969f5880b5cd69c7a22e549d9e7f71843cf2c # Add documentation for deploying letsencrypt certificates
-    - 9c0303398182361752d48193f4e7a38597647b18 # Remove git repo haproxy backend
     - a0761a0e66aebad2951473e676c603cca59fe567 # Simplify path for letsencrypt usage
 
 - name: apply patches to run-upgrade.sh for ceph upgrades

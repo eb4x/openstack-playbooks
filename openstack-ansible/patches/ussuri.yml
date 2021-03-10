@@ -26,14 +26,6 @@
     - 8b3ff31c3a70e48239e7d5f349d7bab93779e9bc # Allow user to override UseDNS in template
   become: true
 
-- name: cherry-pick fixes to os_cinder
-  command: "git cherry-pick {{ item }}"
-  args:
-    chdir: /etc/ansible/roles/os_cinder
-  with_items:
-    - "f5ba9b5b9a88ab09f3d6afded011976525c863a3" # Set correct permissions for rootwrap.d
-  become: true
-
 - name: cherry-pick fixes to os_nova
   command: "git cherry-pick {{ item }}"
   args:
