@@ -79,4 +79,9 @@
     - regexp:  "^  when: \\(tempest_install(.*)$"
       replace: "#  when: (tempest_install\\1"
 
+- name: add elasticsearch to all venvs
+  lineinfile:
+    path: "/opt/openstack-ansible/global-requirement-pins.txt"
+    line: "elasticsearch>=7.0.0,<8.0.0"
+
 # vim: nowrap
