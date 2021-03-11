@@ -1,57 +1,67 @@
 ---
 - name: cherry-pick fixes to haproxy_server
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /etc/ansible/roles/haproxy_server
   with_items:
-    - b7834dd051cff7d6c26a2f92159099d743256836 # Add support for extra VIPs with TLS enabled
-    - 693cdb1afc65bd30375cb08a10c5aaabec9a366d # Align the usage of the two extra lb vip parameters
-    - 049b479b65a700815bd4bbec165e72e33a8fe627 # Add options to override which addresses haproxy binds to
-    - f35867466c02fccbf009ea103580c120b225e371 # Add extra controls for frontend redirects
-    - 04932a7c74b5cb8e7247019b141e3ddeddb072be # Allow extra parameters to be passed to certbot
-    - ba3a89944bee0d76753e55f029e53aaf685f7541 # Allow multiple methods of installing certbot
-    - 1d386a57f527bde36153e5606c3c8189899007ae # Add option to use distro provided certbot package
-    - a254facacf3706a83385e42ac0d76f859c9355bd # Install self-signed certificate before certbot has run for the first time
-    - 28eb2c1d1dbb3963c17c24d8ac5d43c6b0fcdc6e # Add documentation for HA HAProxy with LetsEncrypt certificates
-    - dbc8fe1fe2ec675655624ec7ee3996b20ee6e7a4 # Use a certbot pre-hook to ensure haproxy backend is up before renewal
-    - 449aa69edc835c722bf6f304a0bd581f9388fe88 # Allow frontend acl to be undefined.
-    - 5fba658296634c9f32581c965c8510ff6cdf2b90 # Ensure there is no race between haproxy and certbot for initial cert
-    - 0343893881dce50bf9786265e4b2ea77972114b6 # Define http-01 params with already provided variables
+    - { commit: "b7834dd051cff7d6c26a2f92159099d743256836", desc: "Add support for extra VIPs with TLS enabled" }
+    - { commit: "693cdb1afc65bd30375cb08a10c5aaabec9a366d", desc: "Align the usage of the two extra lb vip parameters" }
+    - { commit: "049b479b65a700815bd4bbec165e72e33a8fe627", desc: "Add options to override which addresses haproxy binds to" }
+    - { commit: "f35867466c02fccbf009ea103580c120b225e371", desc: "Add extra controls for frontend redirects" }
+    - { commit: "04932a7c74b5cb8e7247019b141e3ddeddb072be", desc: "Allow extra parameters to be passed to certbot" }
+    - { commit: "ba3a89944bee0d76753e55f029e53aaf685f7541", desc: "Allow multiple methods of installing certbot" }
+    - { commit: "1d386a57f527bde36153e5606c3c8189899007ae", desc: "Add option to use distro provided certbot package" }
+    - { commit: "a254facacf3706a83385e42ac0d76f859c9355bd", desc: "Install self-signed certificate before certbot has run for the first time" }
+    - { commit: "28eb2c1d1dbb3963c17c24d8ac5d43c6b0fcdc6e", desc: "Add documentation for HA HAProxy with LetsEncrypt certificates" }
+    - { commit: "dbc8fe1fe2ec675655624ec7ee3996b20ee6e7a4", desc: "Use a certbot pre-hook to ensure haproxy backend is up before renewal" }
+    - { commit: "449aa69edc835c722bf6f304a0bd581f9388fe88", desc: "Allow frontend acl to be undefined" }
+    - { commit: "5fba658296634c9f32581c965c8510ff6cdf2b90", desc: "Ensure there is no race between haproxy and certbot for initial cert" }
+    - { commit: "0343893881dce50bf9786265e4b2ea77972114b6", desc: "Define http-01 params with already provided variables" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to lxc_container_create
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /etc/ansible/roles/lxc_container_create
   with_items:
-    - fd62da8df031b07706ea0f5b045f7f3d03519e3f # Allow user to override UseRoutes in template
-    - 8b3ff31c3a70e48239e7d5f349d7bab93779e9bc # Allow user to override UseDNS in template
+    - { commit: "fd62da8df031b07706ea0f5b045f7f3d03519e3f", desc: "Allow user to override UseRoutes in template" }
+    - { commit: "8b3ff31c3a70e48239e7d5f349d7bab93779e9bc", desc: "Allow user to override UseDNS in template" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to os_nova
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /etc/ansible/roles/os_nova
   with_items:
-    - "1958a954b989e391567be4632d794c22ce03bff6" # Simplify scheduler filter additions
+    - { commit: "1958a954b989e391567be4632d794c22ce03bff6", desc: "Simplify scheduler filter additions" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to os_neutron
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   environment: "{{ proxy_env }}"
   args:
     chdir: /etc/ansible/roles/os_neutron
   with_items:
-    - 5dddaa2cfa29422ecab4bf329c22bc5a511982c9 # Allow overriding firewall_driver for ovs
+    - { commit: "5dddaa2cfa29422ecab4bf329c22bc5a511982c9", desc: "Allow overriding firewall_driver for ovs" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to openstack-ansible
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /opt/openstack-ansible
   with_items:
-    - 9d7969f5880b5cd69c7a22e549d9e7f71843cf2c # Add documentation for deploying letsencrypt certificates
-    - a0761a0e66aebad2951473e676c603cca59fe567 # Simplify path for letsencrypt usage
+    - { commit: "9d7969f5880b5cd69c7a22e549d9e7f71843cf2c", desc: "Add documentation for deploying letsencrypt certificates" }
+    - { commit: "a0761a0e66aebad2951473e676c603cca59fe567", desc: "Simplify path for letsencrypt usage" }
+  loop_control:
+    label: "{{ item.desc }}"
 
 - name: apply patches to run-upgrade.sh for ceph upgrades
   shell: "git stash && git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/78/710778/6 && git cherry-pick FETCH_HEAD && git stash pop"

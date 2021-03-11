@@ -1,54 +1,66 @@
 ---
 - name: cherry-pick fixes to ceph-ansible
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /etc/ansible/roles/ceph-ansible
   with_items:
-    - c733af9d43e572c97f301e7f704676f2ea5660dc # Fix Ansible check mode for site.yml.sample playbook
-    - f8a64ce4526c9a79f130aed6080a6d4271ba3e65 # ceph-crash: Only deploy key to targeted hosts
-    - 3d3ce263274d648f8fb376716f52b8b91b6f1313 # rolling_update: fix mgr start with mon collocation
+    - { commit: "c733af9d43e572c97f301e7f704676f2ea5660dc", desc: "Fix Ansible check mode for site.yml.sample playbook" }
+    - { commit: "f8a64ce4526c9a79f130aed6080a6d4271ba3e65", desc: "ceph-crash: Only deploy key to targeted hosts" }
+    - { commit: "3d3ce263274d648f8fb376716f52b8b91b6f1313", desc: "rolling_update: fix mgr start with mon collocation" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to haproxy_server
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /etc/ansible/roles/haproxy_server
   with_items:
-    - 0343893881dce50bf9786265e4b2ea77972114b6 # Define http-01 params with already provided variables
+    - { commit: "0343893881dce50bf9786265e4b2ea77972114b6", desc: "Define http-01 params with already provided variables" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to lxc_container_create
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /etc/ansible/roles/lxc_container_create
   with_items:
-    - fd62da8df031b07706ea0f5b045f7f3d03519e3f # Allow user to override UseRoutes in template
-    - 8b3ff31c3a70e48239e7d5f349d7bab93779e9bc # Allow user to override UseDNS in template
+    - { commit: "fd62da8df031b07706ea0f5b045f7f3d03519e3f", desc: "Allow user to override UseRoutes in template" }
+    - { commit: "8b3ff31c3a70e48239e7d5f349d7bab93779e9bc", desc: "Allow user to override UseDNS in template" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to os_nova
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /etc/ansible/roles/os_nova
   with_items:
-    - "1958a954b989e391567be4632d794c22ce03bff6" # Simplify scheduler filter additions
+    - { commit: "1958a954b989e391567be4632d794c22ce03bff6", desc: "Simplify scheduler filter additions" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to os_neutron
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   environment: "{{ proxy_env }}"
   args:
     chdir: /etc/ansible/roles/os_neutron
   with_items:
-    - 5dddaa2cfa29422ecab4bf329c22bc5a511982c9 # Allow overriding firewall_driver for ovs
+    - { commit: "5dddaa2cfa29422ecab4bf329c22bc5a511982c9", desc: "Allow overriding firewall_driver for ovs" }
+  loop_control:
+    label: "{{ item.desc }}"
   become: true
 
 - name: cherry-pick fixes to openstack-ansible
-  command: "git cherry-pick {{ item }}"
+  command: "git cherry-pick {{ item.commit }}"
   args:
     chdir: /opt/openstack-ansible
   with_items:
-    - a0761a0e66aebad2951473e676c603cca59fe567 # Simplify path for letsencrypt usage
+    - { commit: "a0761a0e66aebad2951473e676c603cca59fe567", desc: "Simplify path for letsencrypt usage" }
+  loop_control:
+    label: "{{ item.desc }}"
 
 - name: apply patches to run-upgrade.sh for ceph upgrades
   shell: "git fetch https://review.opendev.org/openstack/openstack-ansible refs/changes/82/758382/2 && git cherry-pick FETCH_HEAD"
