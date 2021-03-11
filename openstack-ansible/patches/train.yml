@@ -32,6 +32,18 @@
     label: "{{ item.desc }}"
   become: true
 
+- name: cherry-pick fixes to os_horizon
+  shell: "{{ item.shell }}"
+  environment: "{{ proxy_env }}"
+  args:
+    chdir: /etc/ansible/roles/os_horizon
+  with_items:
+    - { shell: "git fetch https://review.opendev.org/openstack/openstack-ansible-os_horizon refs/changes/50/777350/1 && git cherry-pick FETCH_HEAD", desc: "Add hide_create_volume option to defaults" }
+    - { shell: "git fetch https://review.opendev.org/openstack/openstack-ansible-os_horizon refs/changes/80/779880/1 && git cherry-pick FETCH_HEAD", desc: "experimental apm stuff for horizon" }
+  loop_control:
+    label: "{{ item.desc }}"
+  become: true
+
 - name: cherry-pick fixes to os_nova
   command: "git cherry-pick {{ item.commit }}"
   args:
