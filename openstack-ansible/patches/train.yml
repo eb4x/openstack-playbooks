@@ -81,17 +81,6 @@
   args:
     chdir: "/opt/openstack-ansible"
 
-- name: avoid tempest like the plague
-  replace:
-    path: "/opt/openstack-ansible/playbooks/setup-openstack.yml"
-    regexp: "{{ item.regexp }}"
-    replace: "{{ item.replace }}"
-  with_items:
-    - regexp:  "^- (.*): os-tempest-install.yml$"
-      replace: "#- \\1: os-tempest-install.yml"
-    - regexp:  "^  when: \\(tempest_install(.*)$"
-      replace: "#  when: (tempest_install\\1"
-
 - name: add elasticsearch to all venvs
   lineinfile:
     path: "/opt/openstack-ansible/global-requirement-pins.txt"
