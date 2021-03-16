@@ -61,9 +61,18 @@
     chdir: /etc/ansible/roles/os_neutron
   with_items:
     - { commit: "5dddaa2cfa29422ecab4bf329c22bc5a511982c9", desc: "Allow overriding firewall_driver for ovs" }
+    - { commit: "c4d5649b11912637c8ca4753358747fc1b695d3e", desc: "Define condition for the first play host one time" }
+    - { commit: "3b8d8d3be29cefd6aea4faff79184bc3bc2ddf07", desc: "Revert use of _neutron_first_play_host for post install tasks" }
   loop_control:
     label: "{{ item.desc }}"
   become: true
+
+#- name: Implement uWSGI for neutron-api
+#  shell: "git fetch https://review.opendev.org/openstack/openstack-ansible-os_neutron refs/changes/56/486156/24 && git cherry-pick FETCH_HEAD"
+#  environment: "{{ proxy_env }}"
+#  args:
+#    chdir: /etc/ansible/roles/os_neutron
+#  become: true
 
 - name: cherry-pick fixes to openstack-ansible
   command: "git cherry-pick {{ item.commit }}"
