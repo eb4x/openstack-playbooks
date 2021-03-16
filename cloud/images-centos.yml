@@ -1,36 +1,56 @@
 ---
-- name: "set centos {{ release.version + ' ' + release.arch + ' ' + release.build }} url"
+# https://cloud.centos.org/centos/ 7               /images/CentOS- 7 -x86_64 -GenericCloud-2009.qcow2
+# https://cloud.centos.org/centos/ 8        /x86_64/images/CentOS- 8         -GenericCloud- 8.3 .2011-20201204.2. x86_64.qcow2
+# https://cloud.centos.org/centos/ 8-stream /x86_64/images/CentOS- Stream    -GenericCloud- 8-        20210210.0. x86_64.qcow2
+
+- name: "set centos {{ release.version }} {{ release.arch }} {{ release.build is defined | ternary(release.build, release.date) }} url"
   set_fact:
-    centos_url: >-
-      https://cloud.centos.org/centos/{{ release.version[0] }}/{{
-      (release.version[0] == '8') | ternary(release.arch + '/images', 'images') }}/CentOS-{{
-      release.version[0] }}{{ (release.version[0] == '8') | ternary('', '-' + release.arch) }}-GenericCloud-{{
-      (release.version[0] == '8') | ternary(
-        release.version + '.' + release.build + '-' + release.date + '.' + release.arch,
-        release.build
-      ) }}.qcow2
+    centos_url:
+      "7": "https://cloud.centos.org/centos/7/images/CentOS-7-{{ release.arch }}-GenericCloud-{{ release.build | default('0000') }}.qcow2"
+      "8.3": "https://cloud.centos.org/centos/8/{{ release.arch }}/images/CentOS-8-GenericCloud-{{ release.version ~ '.' ~ release.build | default('0000') ~ '-' ~ release.date ~ '.' ~ release.arch }}.qcow2"
+      "8-Stream": "https://cloud.centos.org/centos/8-stream/{{ release.arch }}/images/CentOS-Stream-GenericCloud-8-{{ release.date ~ '.' ~ release.arch }}.qcow2"
+    centos_checksum:
+      "7": "https://cloud.centos.org/centos/7/images/sha256sum.txt"
+      "8.3": "https://cloud.centos.org/centos/8/x86_64/images/CHECKSUM"
+      "8-Stream": "https://cloud.centos.org/centos/8-stream/x86_64/images/CHECKSUM"
 
-- name: "download centos {{ release.version + ' ' + release.arch + ' ' + release.build }} image"
+- name: parse checksums files
+  block:
+    - name: grab CentOS {{ release.version }} checksums file
+      uri:
+        url: "{{ centos_checksum[release.version] }}"
+        return_content: true
+      register: _checksums
+    - name: "find checksum for {{ centos_url[release.version] | basename }}"
+      set_fact:
+        checksum: "{{ _checksums.content | regex_findall(centos_url[release.version] | basename ~ '\\) = (?P<checksum>\\w+)$', multiline=True) }}"
+
+    - name: update {{ release.version }} in centos_checksum
+      set_fact:
+        centos_checksum: "{{ centos_checksum | combine({ '8-Stream': checksum[0] }) }}"
+  when: release.version == '8-Stream'
+
+- name: "download centos {{ release.version | lower }} {{ release.arch }} {{ release.build is defined | ternary(release.build, release.date) }} image"
   get_url:
-    url: "{{ centos_url }}"
-    checksum: "{{ (release.version[0] == '8') | ternary(omit, 'sha256:https://cloud.centos.org/centos/7/images/sha256sum.txt') }}"
-    dest: "{{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.qcow2"
+    url: "{{ centos_url[release.version] }}"
+    checksum: "{{ (release.version == '8.3') | ternary(omit, 'sha256:' ~ centos_checksum[release.version]) }}"
+    dest: "{{ os_image_dir }}/centos-{{ release.version | lower }}-{{ release.arch }}-genericcloud-{{ release.build is defined | ternary(release.build, release.date) }}.qcow2"
 
-- name: "convert centos {{ release.version + ' ' + release.arch + ' ' + release.build }} qcow2 => raw"
+- name: "convert centos {{ release.version | lower }} {{ release.arch }} {{ release.build is defined | ternary(release.build, release.date) }} qcow2 => raw"
   command: >-
     qemu-img convert -f qcow2 -O raw
-    {{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.qcow2
-    {{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.raw
+    {{ os_image_dir }}/centos-{{ release.version | lower }}-{{ release.arch }}-genericcloud-{{ release.build is defined | ternary(release.build, release.date) }}.qcow2
+    {{ os_image_dir }}/centos-{{ release.version | lower }}-{{ release.arch }}-genericcloud-{{ release.build is defined | ternary(release.build, release.date) }}.raw
   args:
-    creates: "{{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.raw"
+    creates: "{{ os_image_dir }}/centos-{{ release.version | lower }}-{{ release.arch }}-genericcloud-{{ release.build is defined | ternary(release.build, release.date) }}.raw"
 
-- name: "upload centos {{ release.version + ' ' + release.arch + ' ' + release.build }} to openstack"
+- name: "upload centos {{ release.version | lower }} {{ release.arch }} {{ release.build is defined | ternary(release.build, release.date) }} to openstack"
   os_image:
     cloud: "{{ os_cloud }}"
     validate_certs: false
     #<<: *os_cloud_auth
-    filename: "{{ os_image_dir }}/centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}.raw"
-    name: "centos-{{ release.version }}-{{ release.arch }}-genericcloud-{{ release.build }}"
+    filename: "{{ os_image_dir }}/centos-{{ release.version | lower }}-{{ release.arch }}-genericcloud-{{ release.build is defined | ternary(release.build, release.date) }}.raw"
+    name: "centos-{{ release.version | lower }}-{{ release.arch }}-genericcloud-{{ release.build is defined | ternary(release.build, release.date) }}"
     disk_format: raw
     is_public: true
     properties:

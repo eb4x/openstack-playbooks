@@ -23,8 +23,9 @@
       loop_control:
         loop_var: release
       with_items:
-        - { version: '7',   arch: x86_64, build: '2009', date: '20201112'   }
-        - { version: '8.3', arch: x86_64, build: '2011', date: '20201204.2' }
+        - { version: '7',        arch: x86_64, build: '2009', date: '20201112'   }
+        - { version: '8.3',      arch: x86_64, build: '2011', date: '20201204.2' }
+        - { version: '8-Stream', arch: x86_64,                date: '20210210.0' }
 
     - include_tasks: images-fcos.yml
       loop_control:
