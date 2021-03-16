@@ -61,4 +61,5 @@
     is_public: true
     properties:
       hw_machine_type: q35
+      hw_qemu_guest_agent: yes
       hw_video_model: qxl
