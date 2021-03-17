@@ -59,3 +59,4 @@
       hw_disk_bus: scsi
       hw_qemu_guest_agent: yes
       hw_video_model: qxl
+      hw_watchdog_action: reset
