@@ -9,8 +9,11 @@
     #openstack_version: "stable/train"
     #openstack_tag: "20.2.3"
 
-    openstack_version: "stable/ussuri"
-    openstack_tag: "21.2.3"
+    #openstack_version: "stable/ussuri"
+    #openstack_tag: "21.2.3"
+
+    openstack_version: "stable/victoria"
+    openstack_tag: "22.1.0"
 
     proxy_env:
       http_proxy: "http://192.168.3.1:8000"
