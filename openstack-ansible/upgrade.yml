@@ -2,6 +2,7 @@
 - name: Configure the host running openstack-ansible
   hosts:
     - openstack_ansible
+  gather_facts: false
 
   vars:
     external_lb_vip_address: openstack.slipsprogrammor.no
