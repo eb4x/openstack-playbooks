@@ -1,0 +1,48 @@
+---
+- name:
+  set_fact:
+    fedora_url:          "https://download.fedoraproject.org/pub/fedora/linux/releases/{{ release.version }}/Cloud/{{ release.arch }}/images/Fedora-Cloud-Base-{{ release.version }}-{{ release.build }}.{{ release.arch }}.qcow2"
+    fedora_checksum_url: "https://download.fedoraproject.org/pub/fedora/linux/releases/{{ release.version }}/Cloud/{{ release.arch }}/images/Fedora-Cloud-{{ release.version }}-{{ release.build }}-{{ release.arch }}-CHECKSUM"
+    #fedora_checksum_url: "https://getfedora.org/static/checksums/Fedora-Cloud-{{ release.version }}-{{ release.build }}-{{ release.arch }}-CHECKSUM"
+
+- name: "grab fedora {{ release.version }}-{{ release.build }} checksums file"
+  uri:
+    url: "{{ fedora_checksum_url }}"
+    return_content: true
+  register: _checksums
+
+- name: "find checksum for {{ fedora_url | basename }}"
+  set_fact:
+    fedora_checksum: "{{ _checksums.content | regex_findall(fedora_url | basename ~ '\\) = (?P<checksum>\\w+)$', multiline=True) }}"
+
+- name: "download fedora-cloud-base {{ release.version }}-{{ release.build }} {{ release.arch }} image"
+  get_url:
+    url: "{{ fedora_url }}"
+    checksum: "sha256:{{ fedora_checksum }}"
+    dest: "{{ os_image_dir }}/fedora-cloud-base-{{ release.version }}-{{ release.build }}.{{ release.arch }}.qcow2"
+
+- name: "convert fedora-cloud-base {{ release.version }}-{{ release.build }} {{ release.arch }} qcow2 => raw"
+  command: >-
+    qemu-img convert -f qcow2 -O raw
+    {{ os_image_dir }}/fedora-cloud-base-{{ release.version }}-{{ release.build }}.{{ release.arch }}.qcow2
+    {{ os_image_dir }}/fedora-cloud-base-{{ release.version }}-{{ release.build }}.{{ release.arch }}.raw
+  args:
+    creates: "{{ os_image_dir }}/fedora-cloud-base-{{ release.version }}-{{ release.build }}.{{ release.arch }}.raw"
+
+- name: "upload fedora-cloud-base {{ release.version }}-{{ release.build }} {{ release.arch }} to openstack"
+  os_image:
+    cloud: "{{ os_cloud }}"
+    validate_certs: false
+    #<<: *os_cloud_auth
+    filename: "{{ os_image_dir }}/fedora-cloud-base-{{ release.version }}-{{ release.build }}.{{ release.arch }}.raw"
+    name: "fedora-cloud-base-{{ release.version }}-{{ release.build }}.{{ release.arch }}"
+    disk_format: raw
+    is_public: true
+    properties:
+      hw_machine_type: q35
+      hw_firmware_type: uefi
+      hw_scsi_model: virtio-scsi
+      hw_disk_bus: scsi
+      hw_qemu_guest_agent: yes
+      hw_video_model: qxl
+      hw_watchdog_action: reset

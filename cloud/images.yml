@@ -27,6 +27,13 @@
         - { version: '8.3',      arch: x86_64, build: '2011', date: '20201204.2' }
         - { version: '8-Stream', arch: x86_64,                date: '20210210.0' }
 
+    - include_tasks: images-fedora.yml
+      loop_control:
+        loop_var: release
+      with_items:
+        - { version: 32, build: 1.6, arch: x86_64 }
+        - { version: 33, build: 1.2, arch: x86_64 }
+
     - include_tasks: images-fcos.yml
       loop_control:
         loop_var: stream
