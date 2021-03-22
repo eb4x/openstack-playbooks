@@ -1,0 +1,67 @@
+---
+- name: configure openstack-ansible-ops
+  hosts:
+    - openstack_ansible
+  gather_facts: false
+
+  vars:
+    #openstack_version: "stable/train"
+    #openstack_version: "stable/ussuri"
+    #openstack_version: "stable/victoria"
+    openstack_version: "master"
+
+    proxy_env:
+      http_proxy: "http://192.168.3.1:8000"
+      https_proxy: "http://192.168.3.1:8000"
+
+  tasks:
+    - name: get openstack-ansible-ops
+      git:
+        repo: https://github.com/openstack/openstack-ansible-ops.git
+        dest: "{{ ansible_env.HOME }}/src//openstack-ansible-ops"
+        version: "{{ openstack_version }}"
+      environment: "{{ proxy_env }}"
+
+    - name: link openstack-ansible-ops to /opt
+      file:
+        path: "/opt/openstack-ansible-ops"
+        src: "{{ ansible_env.HOME }}/src/openstack-ansible-ops"
+        state: link
+      become: true
+
+    - name: cherry-pick fixes to openstack-ansible-ops
+      shell: "{{ item }}"
+      environment: "{{ proxy_env }}"
+      args:
+        chdir: /opt/openstack-ansible-ops
+      with_items:
+        - { shell: "git fetch https://review.opendev.org/openstack/openstack-ansible-ops refs/changes/49/778849/7 && git cherry-pick FETCH_HEAD", desc: "Update beat templates from 7.11 reference" }
+
+    - name: create paths
+      file:
+        name: "/etc/openstack_deploy/{{ item }}"
+        state: directory
+      with_items:
+        - env.d
+        - conf.d
+      become: true
+
+    - name: stat elk container mappings
+      stat:
+        path: "/etc/openstack_deploy/{{ path }}"
+      with_items:
+        - env.d/elk.yml
+        - conf.d/elk.yml
+      loop_control:
+        loop_var: path
+      register: _elk_container_mapping
+
+    - name: copy elk container mapping samples
+      copy:
+        remote_src: true
+        src: "/opt/openstack-ansible-ops/elk_metrics_7x/{{ item.path }}"
+        dest: "/etc/openstack_deploy/{{ item.path }}"
+      with_items: "{{ _elk_container_mapping.results }}"
+      when:
+        - item.stat.exists is false
+      become: true
